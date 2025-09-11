@@ -1,0 +1,2 @@
+-- SQL Schema for the project if it utilizes table(s)
+-- Includes queries to build the schema, table, indexes, etc.
