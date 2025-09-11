@@ -1,0 +1,32 @@
+# Requirements for Python ETL/Automation Project Template
+# Install with: pip install -r requirements.txt
+
+# Core Data Processing
+pandas>=1.5.0                    # Data manipulation and analysis
+numpy>=1.21.0                    # Numerical computing
+
+# Database Operations
+sqlalchemy>=2.0.0                # Database toolkit and ORM
+pyodbc>=4.0.34                   # ODBC database connectivity (Windows)
+
+# API and HTTP Operations
+requests>=2.28.0                 # HTTP library for API calls
+urllib3>=1.26.0                  # HTTP client
+
+# Environment and Configuration
+python-dotenv>=0.19.0            # Environment variable management
+pyyaml>=6.0                      # YAML configuration files
+
+# File Processing
+openpyxl>=3.0.10                 # Excel file operations
+xlsxwriter>=3.0.3                # Excel file writing
+
+# Testing Framework
+pytest>=7.0.0                    # Testing framework
+pytest-cov>=4.0.0                # Coverage reporting
+pytest-mock>=3.10.0              # Mocking utilities
+
+# Development Tools
+black>=22.0.0                    # Code formatting
+flake8>=5.0.0                    # Code linting
+mypy>=0.991                      # Type checking

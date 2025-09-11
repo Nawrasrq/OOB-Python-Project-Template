@@ -1,0 +1,22 @@
+# Ignore potential venv and env files
+venv
+.env
+
+# Ignore all potential log files except for those in docs and config
+*.log
+*.xlsx
+*.xls
+*.csv
+*.json
+*.txt
+*.pdf
+*.docx
+*.doc
+*.pptx
+!/config
+!/docs
+!/requirements.txt
+
+# Ignore potential pycache files
+__pycache__
+
