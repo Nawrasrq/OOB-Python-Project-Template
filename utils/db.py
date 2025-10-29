@@ -8,7 +8,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.engine import Engine
 from typing import List, Dict, Optional
 
-
 class DB:
     def __init__(self, instance_id=None):
         """
@@ -196,16 +195,24 @@ class DB:
         -------
         pd.DataFrame
             A dataframe with the specified columns.
+
+        Raises
+        ------
+        RuntimeError
+            If filtering operation fails.
+        SQLAlchemyError
+            If filtering SQL operation fails.
+        Exception
+            If unexpected error occurs.
         """
         try:
             if df.empty:
-                logging.warning("Failed to filter, DataFrame is empty")
-                raise pd.errors.EmptyDataError("Failed to filter, DataFrame is empty")
+                self.logger.warning(f"Warning, cannot filter for table {schema}.{table}, DataFrame is empty")
 
             # If no existing data, return all upload data
             existing_df = self.read(engine_name=engine_name, schema=schema, table=table, table_columns=join_cols + change_detection_cols)
             if existing_df.empty:
-                logging.info("No existing data found, returning all upload data")
+                self.logger.warning(f"Warning, no existing data found for table {schema}.{table}, returning all upload data")
                 return df
             
             # Filter based on change detection columns
@@ -214,20 +221,24 @@ class DB:
 
             # Drop the existing columns
             filtered_df = filtered_df.drop(columns=[f'{col}_existing' for col in change_detection_cols])
-            logging.info(f"Filtered {len(filtered_df)} rows from {len(df)} upload rows")
+            self.logger.info(f"Filtered {len(filtered_df)} rows from {len(df)} upload rows for table {schema}.{table}")
 
             # Return the filtered dataframe
             return filtered_df
+
+        except SQLAlchemyError as e:
+            self.logger.error(f"filter SQL error for table {schema}.{table}: {e}")
+            raise RuntimeError(f"Filter SQL error for table {schema}.{table}: {e}")
         except Exception as e:
-            logging.error(f"Error filtering dataframe: {e}")
-            raise
+            self.logger.error(f"Unexpected error in filter for table {schema}.{table}: {e}")
+            raise RuntimeError(f"Unexpected error in filter for table {schema}.{table}: {e}")
 
     def insert(
         self,
         df: pd.DataFrame,
         engine_name: str,
         schema: str,
-        table_name: str,
+        table: str,
         where_clause: str = None,
         table_columns: List[str] = None,
         query: Optional[str] = None,
@@ -243,7 +254,7 @@ class DB:
             The name of the engine to insert to.
         schema : str
             The schema of the table.
-        table_name : str
+        table : str
             The table to insert to.
         where_clause : str, optional
             The where clause to filter the table.
@@ -255,12 +266,16 @@ class DB:
         Raises
         ------
         RuntimeError
-            If merge operation fails.
+            If insert operation fails.
+        SQLAlchemyError
+            If insert SQL operation fails.
+        Exception
+            If unexpected error occurs.
         """
         try:
             # Check for empty or missing columns in dataframe
             if df.empty:
-                self.logger.warning("insert received empty DataFrame; skipping insert")
+                self.logger.warning(f"Warning, cannot insert for table {schema}.{table}, DataFrame is empty")
                 return
 
             # Build insert SQL
@@ -268,7 +283,7 @@ class DB:
                 insert_cols = ", ".join(table_columns)
                 insert_vals = ", ".join([f"source.{c}" for c in table_columns])
                 insert_sql = f"""
-                INSERT INTO {schema}.{table_name} ({insert_cols})
+                INSERT INTO {schema}.{table} ({insert_cols})
                 VALUES ({insert_vals});
                 """
                 if where_clause:
@@ -279,14 +294,14 @@ class DB:
             # Write dataframe to target table
             with self.get_engine(engine_name).begin() as conn:
                 conn.execute(text(insert_sql))
-                self.logger.info(f"Inserted {len(df)} rows into {schema}.{table_name}")
+                self.logger.info(f"Inserted {len(df)} rows into {schema}.{table}")
 
         except SQLAlchemyError as e:
-            self.logger.error(f"insert SQL error for table {table_name}: {e}")
-            raise RuntimeError(f"Insert SQL error: {e}")
+            self.logger.error(f"insert SQL error for table {schema}.{table}: {e}")
+            raise RuntimeError(f"Insert SQL error for table {schema}.{table}: {e}")
         except Exception as e:
-            self.logger.error(f"Unexpected error in insert: {e}")
-            raise RuntimeError(f"Unexpected error in insert: {e}")
+            self.logger.error(f"Unexpected error in insert for table {schema}.{table}: {e}")
+            raise RuntimeError(f"Unexpected error in insert for table {schema}.{table}: {e}")
 
     def upsert(
         self,
@@ -294,7 +309,7 @@ class DB:
         engine_name: str,
         schema: str,
         table: str,
-        on_condition: str = None,
+        on_condition: str,
         table_columns: List[str] = None
     ) -> dict:
         """
@@ -310,8 +325,8 @@ class DB:
             Target schema.
         table : str
             Target table.
-        on_condition : str, optional
-            MERGE ON condition (required if query not provided).
+        on_condition : str
+            MERGE ON condition
         table_columns : List[str], optional
             Target table columns.
             
@@ -319,11 +334,20 @@ class DB:
         -------
         dict
             Dictionary with 'inserted' and 'updated' row counts.
+
+        Raises
+        ------
+        RuntimeError
+            If upsert operation fails.
+        SQLAlchemyError
+            If upsert SQL operation fails.
+        Exception
+            If unexpected error occurs.
         """
         try:
             if df.empty:
-                logging.warning("Failed to upsert, DataFrame is empty")
-                return
+                self.logger.warning(f"Warning, cannot upsert for table {schema}.{table}, DataFrame is empty")
+                return {'inserted': 0, 'updated': 0}
             
             # Get connection
             conn = self.get_engine(engine_name)
@@ -333,20 +357,16 @@ class DB:
                 table_columns = df.columns.tolist()
 
             # Build MERGE query 
-            temp_table_name = f'#temp{str(uuid.uuid4()).replace("-", "_")}'
+            temp_table = f'#temp{str(uuid.uuid4()).replace("-", "_")}'
             with conn.begin() as conn:
                 # Upload data to temp table first
                 df[table_columns].to_sql(
-                    name=temp_table_name,
+                    name=temp_table,
                     con=conn,
                     schema=schema,
                     if_exists='replace',
                     index=False
                 )
-
-                # Validate on_condition is provided for default query
-                if not on_condition:
-                    raise ValueError("'on_condition' must be provided")
                 
                 # Build default MERGE query
                 update_set_clause = ', '.join([f"target.[{col}] = source.[{col}]"  for col in table_columns])
@@ -355,7 +375,7 @@ class DB:
                 
                 upsert_query = text(f"""
                 MERGE {schema}.{table} AS target
-                USING {temp_table_name} AS source
+                USING {temp_table} AS source
                     ON {on_condition}
                 WHEN MATCHED THEN
                     UPDATE SET {update_set_clause}
@@ -373,10 +393,13 @@ class DB:
                 inserted = sum(1 for row in rows if row[0] == 'INSERT')
                 updated = sum(1 for row in rows if row[0] == 'UPDATE')
                 
-                logging.info(f"Upsert completed for {schema}.{table}: {inserted} inserted, {updated} updated")
+                self.logger.info(f"Upsert completed for {schema}.{table}: {inserted} inserted, {updated} updated")
                 
                 return {'inserted': inserted, 'updated': updated}
 
+        except SQLAlchemyError as e:
+            self.logger.error(f"upsert SQL error for table {schema}.{table}: {e}")
+            raise RuntimeError(f"Upsert SQL error for table {schema}.{table}: {e}")
         except Exception as e:
-            logging.error(f"Error upserting dataframe: {e}")
-            raise
+            self.logger.error(f"Unexpected error in upsert for table {schema}.{table}: {e}")
+            raise RuntimeError(f"Unexpected error in upsert for table {schema}.{table}: {e}")
