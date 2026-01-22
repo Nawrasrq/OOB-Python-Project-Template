@@ -2,10 +2,11 @@
 # Template class for API operations - customize based on your specific API needs
 
 import logging
+from typing import Optional
 
 
 class API:
-    def __init__(self, instance_id=None):
+    def __init__(self, instance_id: Optional[int] = None):
         """
         Initialize the API utility.
 

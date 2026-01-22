@@ -15,40 +15,33 @@
     "python.testing.autoTestDiscoverOnSaveEnabled": true,
     "python.testing.cwd": "${workspaceFolder}",
 
-    // Code Formatting
+    // Code Formatting & Linting (Ruff)
     "[python]": {
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
             "source.organizeImports": "explicit"
         },
-        "editor.defaultFormatter": "ms-python.black-formatter"
+        "editor.defaultFormatter": "charliermarsh.ruff"
     },
-    "black-formatter.args": [
-        "--config",
-        "${workspaceFolder}/pyproject.toml"
-    ],
-    "isort.args": [
-        "--settings-path",
-        "${workspaceFolder}/pyproject.toml"
-    ],
 
-    // Linting
-    "flake8.args": [
-        "--max-line-length=100",
-        "--extend-ignore=E203,W503"
-    ],
+    // Ruff Configuration
+    "ruff.configurationPreference": "filesystemFirst",
+    "ruff.lineLength": 100,
+    "ruff.organizeImports": true,
+    "ruff.fixAll": true,
 
-    // Type Checking
+    // Type Checking (mypy - strict)
     "mypy-type-checker.args": [
         "--config-file=${workspaceFolder}/pyproject.toml"
     ],
 
-    // Language Server
+    // Language Server (Pylance - strict)
     "python.languageServer": "Pylance",
     "python.analysis.extraPaths": [
         "${workspaceFolder}"
     ],
-    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.typeCheckingMode": "strict",
     "python.analysis.autoImportCompletions": true,
     "python.analysis.completeFunctionParens": true,
 
@@ -72,7 +65,8 @@
         "**/.pytest_cache": true,
         "**/.mypy_cache": true,
         "**/*.egg-info": true,
-        "**/.coverage": true
+        "**/.coverage": true,
+        "**/.ruff_cache": true
     },
 
     // Search Exclusions
@@ -82,6 +76,7 @@
         "**/__pycache__": true,
         "**/.pytest_cache": true,
         "**/.mypy_cache": true,
+        "**/.ruff_cache": true,
         "**/htmlcov": true
     }
 }

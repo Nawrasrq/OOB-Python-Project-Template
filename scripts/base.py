@@ -5,7 +5,9 @@
 import abc
 import logging
 import os
+from typing import Any, Dict, List, Optional
 
+import pandas as pd
 from dotenv import load_dotenv
 
 from utils.api import API
@@ -28,7 +30,7 @@ class Base(abc.ABC):
         # Logging
         Base._instance_count += 1
         self.instance_id = Base._instance_count
-        self.file_handler = None
+        self.file_handler: Optional[logging.FileHandler] = None
         self.configure_logging(file_path=file_path)
 
         logger_name = f"scripts.base.instance_{self.instance_id}"
@@ -50,7 +52,15 @@ class Base(abc.ABC):
             raise
 
     # MARK: Wrappers
-    def read(self, engine_name: str, schema: str, table: str, table_columns: list, where_clause: str, query: str):
+    def read(
+        self,
+        engine_name: str,
+        schema: str,
+        table: str,
+        table_columns: Optional[List[str]] = None,
+        where_clause: Optional[str] = None,
+        query: Optional[str] = None,
+    ) -> pd.DataFrame:
         """
         Read a table from the database using the DB utility wrapper.
 
@@ -62,12 +72,12 @@ class Base(abc.ABC):
             Database schema name
         table : str
             Table name to read
-        table_columns : list
-            Column names to select, or None for all
-        where_clause : str
-            SQL WHERE clause without 'WHERE' keyword, or None
-        query : str
-            Custom SQL query, or None to use table/columns
+        table_columns : List[str], optional
+            Column names to select. Defaults to None (all columns).
+        where_clause : str, optional
+            SQL WHERE clause without 'WHERE' keyword. Defaults to None.
+        query : str, optional
+            Custom SQL query. Defaults to None (uses table/columns).
 
         Returns
         -------
@@ -104,15 +114,22 @@ class Base(abc.ABC):
             full_log_path = os.path.join("logs", file_path)
 
             # Create a file handler for the instance
-            self.file_handler = logging.FileHandler(full_log_path, mode='w')
+            self.file_handler = logging.FileHandler(full_log_path, mode="w")
             self.file_handler.setLevel(logging.INFO)
 
             # Create formatter
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
             self.file_handler.setFormatter(formatter)
 
             # Set up instance-specific loggers for all modules
-            base_modules = ['scripts.base', 'scripts.child', 'utils.api', 'utils.file', 'utils.db', 'tools.tool']
+            base_modules = [
+                "scripts.base",
+                "scripts.child",
+                "utils.api",
+                "utils.file",
+                "utils.db",
+                "tools.tool",
+            ]
 
             for module_name in base_modules:
                 instance_logger_name = f"{module_name}.instance_{self.instance_id}"
@@ -134,7 +151,14 @@ class Base(abc.ABC):
 
             # Clean up file handler
             if self.file_handler:
-                base_modules = ['scripts.base', 'scripts.child', 'utils.api', 'utils.file', 'utils.db', 'tools.tool']
+                base_modules = [
+                    "scripts.base",
+                    "scripts.child",
+                    "utils.api",
+                    "utils.file",
+                    "utils.db",
+                    "tools.tool",
+                ]
                 for module_name in base_modules:
                     instance_logger_name = f"{module_name}.instance_{self.instance_id}"
                     logger = logging.getLogger(instance_logger_name)
@@ -146,7 +170,7 @@ class Base(abc.ABC):
                 self.file_handler = None
 
         except Exception as e:
-            if hasattr(self, 'logger') and self.logger:
+            if hasattr(self, "logger") and self.logger:
                 self.logger.error(f"Error in dispose method: {e}")
             else:
                 print(f"Error in dispose method: {e}")
@@ -154,7 +178,7 @@ class Base(abc.ABC):
 
     # MARK: Abstract ETL Methods
     @abc.abstractmethod
-    def extract(self):
+    def extract(self) -> None:
         """
         Extract data from source systems.
 
@@ -166,7 +190,7 @@ class Base(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def transform(self):
+    def transform(self) -> None:
         """
         Transform extracted data according to business rules.
 
@@ -178,7 +202,7 @@ class Base(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def load(self):
+    def load(self) -> None:
         """
         Load transformed data to destination systems.
 
@@ -190,13 +214,13 @@ class Base(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def main(self):
+    def main(self) -> Dict[str, Any]:
         """
         Main execution method that orchestrates the complete workflow.
 
         Returns
         -------
-        dict
+        Dict[str, Any]
             Dictionary containing execution results, status, and metrics
 
         Raises

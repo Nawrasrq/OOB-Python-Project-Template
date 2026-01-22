@@ -7,10 +7,8 @@
 		// Testing
 		"littlefoxteam.vscode-python-test-adapter",
 
-		// Code Quality & Formatting
-		"ms-python.black-formatter",
-		"ms-python.flake8",
-		"ms-python.isort",
+		// Code Quality & Formatting (Ruff for formatting, linting, import sorting)
+		"charliermarsh.ruff",
 		"ms-python.mypy-type-checker",
 
 		// Enhanced Editor Experience

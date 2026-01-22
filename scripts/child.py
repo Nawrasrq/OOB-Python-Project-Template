@@ -30,7 +30,7 @@ class Child(Base):
         self.logger = logging.getLogger(logger_name)
         self.logger.info("Initialized scripts.child class")
 
-    def extract(self):
+    def extract(self) -> None:
         """
         Extract data from source systems.
         """
@@ -42,7 +42,7 @@ class Child(Base):
             self.logger.error(f"Data extraction failed: {e}")
             raise
 
-    def transform(self):
+    def transform(self) -> None:
         """
         Transform extracted data according to business rules.
         """
@@ -54,7 +54,7 @@ class Child(Base):
             self.logger.error(f"Data transformation failed: {e}")
             raise
 
-    def load(self):
+    def load(self) -> None:
         """
         Load transformed data to destination systems.
         """
@@ -84,10 +84,7 @@ class Child(Base):
             # self.transform()
             # self.load()
 
-            result = {
-                'status': 'success',
-                'message': 'Template workflow completed'
-            }
+            result = {"status": "success", "message": "Template workflow completed"}
 
             self.logger.info("ETL workflow completed")
             return result

@@ -2,10 +2,11 @@
 # Template class for file operations - customize based on your specific file processing needs
 
 import logging
+from typing import Optional
 
 
 class File:
-    def __init__(self, instance_id=None):
+    def __init__(self, instance_id: Optional[int] = None):
         """
         Initialize the File utility.
 

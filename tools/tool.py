@@ -5,6 +5,8 @@
 
 import logging
 import os
+import tkinter as tk
+from typing import Optional
 
 from scripts.child import Child
 
@@ -20,48 +22,88 @@ class Tool:
             The path to the log file including the file name, relative to logs directory.
             Defaults to "tool/tool.log".
         """
-        # Logging
-        self.log_file_path = log_file_path
-        log_dir = os.path.dirname(log_file_path)
-        if log_dir:
-            full_log_dir = os.path.join("logs", log_dir)
-            os.makedirs(full_log_dir, exist_ok=True)
+        try:
+            # Logging
+            self.log_file_path = log_file_path
+            log_dir = os.path.dirname(log_file_path)
+            if log_dir:
+                full_log_dir = os.path.join("logs", log_dir)
+                os.makedirs(full_log_dir, exist_ok=True)
 
-        self.child = Child(log_file_path)
-        tool_logger_name = f"tools.tool.instance_{self.child.instance_id}"
-        self.logger = logging.getLogger(tool_logger_name)
+            # Initialize child class
+            self.child = Child(log_file_path)
+            tool_logger_name = f"tools.tool.instance_{self.child.instance_id}"
+            self.logger = logging.getLogger(tool_logger_name)
 
-        # GUI
-        self.create_gui()
-        self.logger.info("Initialized Tool class")
+            # GUI
+            self.root: Optional[tk.Tk] = None
+            self.create_gui()
+            self.logger.info("Initialized Tool class")
 
-    def main(self):
+        except Exception as e:
+            if hasattr(self, "logger") and self.logger:
+                self.logger.error(f"Failed to initialize Tool class: {e}")
+            else:
+                print(f"Failed to initialize Tool class: {e}")
+            raise
+
+    def main(self) -> None:
         """
         Main function
         """
-        self.child.main()
+        try:
+            self.child.main()
+        except Exception as e:
+            self.logger.error(f"Error in main: {e}")
+            raise
 
-    def create_gui(self):
+    def create_gui(self) -> None:
         """
         Create the GUI
         """
-        self.logger.info("Creating GUI")
+        try:
+            self.logger.info("Creating GUI")
+            self.root = tk.Tk()
+            self.root.title("Tool GUI")
+        except Exception as e:
+            self.logger.error(f"Failed to create GUI: {e}")
+            raise
 
-    def run(self):
+    def run(self) -> None:
         """
         Run the tool
         """
-        self.logger.info("Running tool")
-        self.main()
+        try:
+            self.logger.info("Running tool")
+            self.main()
+        except Exception as e:
+            self.logger.error(f"Error running tool: {e}")
+            raise
 
-    def dispose(self):
+    def dispose(self) -> None:
         """
         Dispose of the tool's resources
         """
-        self.logger.info("Disposing of Tool class")
-        if hasattr(self, 'child') and self.child:
-            self.child.dispose()
+        try:
+            self.logger.info("Disposing of Tool class")
+
+            # Destroy GUI if it exists
+            if self.root:
+                self.root.destroy()
+                self.root = None
+
+            # Dispose of child resources
+            if hasattr(self, "child") and self.child:
+                self.child.dispose()
+
+        except Exception as e:
+            self.logger.error(f"Error disposing Tool class: {e}")
+            raise
+
 
 if __name__ == "__main__":
     tool = Tool()
-    tool.run()
+    try:
+        tool.run()
+    finally:
+        tool.dispose()
